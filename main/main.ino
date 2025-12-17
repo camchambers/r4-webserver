@@ -1,7 +1,8 @@
 #include "ArduinoGraphics.h"
 #include "Arduino_LED_Matrix.h"
 #include "WiFiS3.h"
-#include "arduino_secrets.h" 
+#include "arduino_secrets.h"
+#include "webpage.h" 
 
 char ssid[] = SECRET_SSID;
 char pass[] = SECRET_PASS;
@@ -94,23 +95,9 @@ void loop() {
     client.stop();
   }
 }
-
 // Function to serve HTML/CSS
 void sendWebPage(WiFiClient &client) {
-  client.println("<!DOCTYPE HTML>");
-  client.println("<html><head><meta name='viewport' content='width=device-width, initial-scale=1'>");
-  client.println("<style>");
-  client.println("body { font-family: sans-serif; text-align: center; background-color: #222; color: #fff; padding: 50px; }");
-  client.println("input { padding: 10px; font-size: 1.2rem; width: 80%; border-radius: 5px; border: none; }");
-  client.println("button { padding: 10px 20px; font-size: 1.2rem; background: #00979d; color: white; border: none; border-radius: 5px; cursor: pointer; margin-top: 10px; }");
-  client.println("</style></head>");
-  client.println("<body>");
-  client.println("<h1>R4 WiFi Matrix</h1>");
-  client.println("<form action='/' method='GET'>");
-  client.println("<input type='text' name='msg' placeholder='Type a message...' maxlength='50'>");
-  client.println("<br><button type='submit'>Send to Matrix</button>");
-  client.println("</form>");
-  client.println("</body></html>");   
+  client.print(WEBPAGE);
 }
 
 // Simple parsing logic to extract ?msg=Value
