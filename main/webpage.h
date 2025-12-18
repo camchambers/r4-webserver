@@ -34,11 +34,13 @@ const char WEBPAGE[] PROGMEM = R"rawliteral(
   </style>
 </head>
 <body>
-  <h1>R4 WiFi Matrix Display</h1>
+  <h1>R4 WiFi Matrix</h1>
   <form action='/' method='GET'>
     <input type='text' name='msg' placeholder='Type a message...' maxlength='50'>
     <br><button type='submit'>Send to Matrix</button>
   </form>
+  <br>
+  <a href='/matrix' style='color: #00979d; text-decoration: none;'>→ LED Matrix Control</a>
 </body>
 </html>
 )rawliteral";

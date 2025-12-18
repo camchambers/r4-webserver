@@ -1,8 +1,7 @@
-#include "ArduinoGraphics.h"
 #include "Arduino_LED_Matrix.h"
 #include "WiFiS3.h"
 #include "arduino_secrets.h"
-#include "webpage.h" 
+#include "matrix_page.h" 
 
 char ssid[] = SECRET_SSID;
 char pass[] = SECRET_PASS;
@@ -11,18 +10,13 @@ int status = WL_IDLE_STATUS;
 WiFiServer server(80);
 
 ArduinoLEDMatrix matrix;
-
-// Default message
-String currentMessage = " Hello World! ";
+uint8_t matrixFrame[8][12] = {0};
 
 void setup() {
   Serial.begin(115200);
   
   // Initialize Matrix
   matrix.begin();
-  matrix.beginDraw();
-  matrix.stroke(0xFFFFFFFF);
-  matrix.textScrollSpeed(100); // Adjust speed
   
   // Check for WiFi module
   if (WiFi.status() == WL_NO_MODULE) {
@@ -43,16 +37,10 @@ void setup() {
 }
 
 void loop() {
-  // 1. Scroll the text (This uses ArduinoGraphics)
-  matrix.beginDraw();
-  matrix.stroke(0xFFFFFFFF);
-  matrix.textFont(Font_5x7);
-  matrix.beginText(0, 1, 0xFFFFFFFF);
-  matrix.println(currentMessage);
-  matrix.endText(SCROLL_LEFT);
-  matrix.endDraw();
+  // Display custom pattern
+  matrix.renderBitmap(matrixFrame, 8, 12);
 
-  // 2. Handle Web Server Clients
+  // Handle Web Server Clients
   WiFiClient client = server.available();
   if (client) {
     String currentLine = "";
@@ -77,11 +65,11 @@ void loop() {
             client.println("Connection: close");
             client.println();
             
-            // Send the Web Page
-            sendWebPage(client);
-            
-            // Check if there was a message in the URL
-            parseMessage(requestLine);
+            // Serve matrix page
+            if (requestLine.indexOf("?data=") >= 0) {
+              parseMatrixData(requestLine);
+            }
+            sendMatrixPage(client);
             
             break;
           } else {
@@ -95,27 +83,43 @@ void loop() {
     client.stop();
   }
 }
-// Function to serve HTML/CSS
-void sendWebPage(WiFiClient &client) {
-  client.print(WEBPAGE);
+// Function to serve matrix control page
+void sendMatrixPage(WiFiClient &client) {
+  client.print(MATRIX_PAGE);
 }
 
-// Simple parsing logic to extract ?msg=Value
-void parseMessage(String request) {
-  int msgIndex = request.indexOf("?msg=");
-  if (msgIndex != -1) {
-    int endSpace = request.indexOf(" ", msgIndex);
-    String rawMsg = request.substring(msgIndex + 5, endSpace);
+// Parse matrix data from URL
+void parseMatrixData(String request) {
+  int dataIndex = request.indexOf("?data=");
+  if (dataIndex != -1) {
+    int endSpace = request.indexOf(" ", dataIndex);
+    String matrixData = request.substring(dataIndex + 6, endSpace);
     
-    // Replace URL encoded spaces (+) with real spaces
-    rawMsg.replace("+", " ");
-    // Basic URL decode (optional, for %20)
-    rawMsg.replace("%20", " ");
+    // Decode URL encoding
+    matrixData.replace("+", " ");
+    matrixData.replace("%2C", ",");
     
-    // Set the global message to be scrolled
-    // Add spaces for smooth scrolling loops
-    currentMessage = "   " + rawMsg + "   "; 
-    Serial.println("New Message: " + currentMessage);
+    // Parse the matrix data (format: "000000000000,111111111111,...")
+    int row = 0;
+    int startPos = 0;
+    while (row < 8 && startPos < matrixData.length()) {
+      int commaPos = matrixData.indexOf(',', startPos);
+      String rowData;
+      if (commaPos == -1) {
+        rowData = matrixData.substring(startPos);
+      } else {
+        rowData = matrixData.substring(startPos, commaPos);
+      }
+      
+      for (int col = 0; col < 12 && col < rowData.length(); col++) {
+        matrixFrame[row][col] = (rowData.charAt(col) == '1') ? 1 : 0;
+      }
+      
+      row++;
+      startPos = commaPos + 1;
+    }
+    
+    Serial.println("Matrix updated");
   }
 }
 
